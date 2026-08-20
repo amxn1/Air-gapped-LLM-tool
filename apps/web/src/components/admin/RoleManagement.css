@@ -1,0 +1,150 @@
+.role-management {
+  width: 100%;
+}
+
+.rm-header {
+  margin-bottom: 30px;
+}
+
+.rm-header h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.rm-description {
+  color: #6c757d;
+  font-size: 1rem;
+  margin-bottom: 25px;
+  line-height: 1.5;
+}
+
+.rm-roles-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.rm-role-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: 1px solid #eee;
+}
+
+.rm-role-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.rm-role-header h4 {
+  margin: 0;
+  color: #495057;
+}
+
+.rm-role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.rm-role-badge.rm-role-admin {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.rm-role-badge.rm-role-user {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.rm-role-badge.rm-role-collection_steward {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.rm-role-badge.rm-role-viewer {
+  background-color: #28a745;
+  color: white;
+}
+
+.rm-role-description {
+  color: #495057;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.rm-role-permissions {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #f8f9fa;
+}
+
+.rm-role-permissions h5 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.rm-permissions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rm-permissions-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.rm-permissions-list li:last-child {
+  border-bottom: none;
+}
+
+/* Loading and error states */
+.loading,
+.error {
+  padding: 40px;
+  text-align: center;
+}
+
+.error {
+  color: #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .rm-roles-container {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  .rm-role-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rm-role-header h4 {
+    margin-bottom: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rm-roles-container {
+    grid-template-columns: 1fr;
+  }
+
+  .rm-role-card {
+    padding: 15px;
+  }
+}

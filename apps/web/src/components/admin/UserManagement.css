@@ -1,0 +1,289 @@
+.user-management {
+  width: 100%;
+}
+
+.um-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.um-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.um-add-button {
+  padding: 8px 16px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.um-add-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.um-form {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.um-form h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.um-field {
+  margin-bottom: 15px;
+}
+
+.um-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.um-field input,
+.um-field select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 0.9rem;
+}
+
+.um-field input:focus,
+.um-field select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.um-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.um-cancel,
+.um-save {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.um-cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.um-cancel:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.um-save {
+  background-color: #007bff;
+  color: white;
+}
+
+.um-save:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.um-table-container {
+  overflow-x: auto;
+}
+
+.um-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.um-table th,
+.um-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.um-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
+.um-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+.um-table tr.inactive {
+  opacity: 0.7;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.role-badge.role-admin {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.role-badge.role-user {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.role-badge.role-collection_steward {
+  background-color: #6f42c1;
+  color: white;
+}
+
+.role-badge.role-viewer {
+  background-color: #28a745;
+  color: white;
+}
+
+.status-active {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-color: #28a745;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.status-inactive {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background-color: #dc3545;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.um-actions-cell {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.um-action-button {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+}
+
+.um-action-button.um-edit {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.um-action-button.um-edit:hover {
+  background-color: #e0a800;
+}
+
+.um-action-button.um-toggle {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.um-action-button.um-toggle:hover {
+  background-color: #138496;
+}
+
+.um-action-button.um-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.um-action-button.um-delete:hover {
+  background-color: #c82333;
+}
+
+.um-empty-state {
+  text-align: center;
+  padding: 30px;
+  color: #6c757d;
+}
+
+/* Loading and error states */
+.loading,
+.error {
+  padding: 40px;
+  text-align: center;
+}
+
+.error {
+  color: #dc3545;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .um-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .um-header h3 {
+    margin-bottom: 15px;
+  }
+
+  .um-table th,
+  .um-table td {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  .um-field input,
+  .um-field select {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .um-table th,
+  .um-table td {
+    padding: 8px;
+    font-size: 0.75rem;
+  }
+
+  .um-actions-cell {
+    flex-direction: column;
+  }
+
+  .um-action-button {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+}

@@ -1,0 +1,156 @@
+.document-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: white;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: box-shadow 0.2s;
+}
+
+.document-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dc-header {
+  display: flex;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.dc-icon {
+  font-size: 2rem;
+  margin-right: 15px;
+}
+
+.dc-info {
+  flex: 1;
+}
+
+.dc-info h4 {
+  margin: 0 0 5px 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.dc-filename {
+  font-size: 0.85rem;
+  color: #6c757d;
+  word-break: break-all;
+}
+
+.dc-body {
+  flex: 1;
+  padding: 15px;
+}
+
+.dc-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.dc-status {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dc-status span {
+  font-size: 0.85rem;
+}
+
+.dc-date {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin-top: 8px;
+}
+
+.dc-actions {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  border-top: 1px solid #eee;
+}
+
+.dc-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.dc-view {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.dc-view:hover {
+  background-color: #138496;
+}
+
+.dc-download {
+  background-color: #28a745;
+  color: white;
+}
+
+.dc-download:hover {
+  background-color: #218838;
+}
+
+.dc-delete {
+  background-color: #dc3545;
+  color: white;
+}
+
+.dc-delete:hover {
+  background-color: #c82333;
+}
+
+/* Move to collection styles */
+.dc-move-collection {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.dc-move-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .dc-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dc-icon {
+    margin-bottom: 10px;
+  }
+
+  .dc-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dc-move-collection {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .dc-btn {
+    width: 100%;
+  }
+}

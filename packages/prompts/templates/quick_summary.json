@@ -1,0 +1,12 @@
+{
+  "name": "quick_summary",
+  "version": "1.0.0",
+  "description": "Short factual 2-3 sentence overview of supplied text or document",
+  "system_prompt": "You are a concise document analyst. Create a brief, strictly factual summary of the provided text. Focus only on the central message and key conclusions in 2 to 3 sentences without editorializing.",
+  "user_template": "Provide a brief 2-3 sentence summary of the following text:\n\n---\n{input_text}\n---",
+  "parameters": {
+    "temperature": 0.2,
+    "max_tokens": 256,
+    "top_p": 0.9
+  }
+}

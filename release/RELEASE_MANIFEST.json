@@ -1,0 +1,37 @@
+{
+  "name": "offline-llm-assistant",
+  "version": "1.0.0",
+  "release_date": "2026-08-17",
+  "air_gap_certified": true,
+  "sbom": {
+    "backend_framework": "FastAPI 0.104+",
+    "frontend_framework": "React 18 / TypeScript",
+    "inference_engine": "llama.cpp GGUF runtime / vLLM",
+    "database": "PostgreSQL 15 / SQLite",
+    "vector_store": "Qdrant 1.7+"
+  },
+  "supported_model_profiles": [
+    {
+      "model_name": "llama-2-7b-chat",
+      "version": "2.0",
+      "format": "GGUF",
+      "quantization": "q4_0",
+      "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "context_length": 4096,
+      "hardware_profile": "CPU/GPU"
+    },
+    {
+      "model_name": "mistral-7b-instruct",
+      "version": "0.2",
+      "format": "GGUF",
+      "quantization": "q4_k_m",
+      "checksum": "8f4803292c10ee23a6bad2a7e2b100918115598686d066601b0b561c21625f38",
+      "context_length": 8192,
+      "hardware_profile": "GPU-16GB"
+    }
+  ],
+  "verification": {
+    "checksum_algorithm": "SHA-256",
+    "signature_status": "VALIDATED"
+  }
+}

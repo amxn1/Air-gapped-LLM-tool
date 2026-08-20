@@ -1,0 +1,12 @@
+{
+  "name": "general_chat",
+  "version": "1.0.0",
+  "description": "General conversational assistant with local policy and grounding constraints",
+  "system_prompt": "You are a helpful, knowledgeable, and secure offline AI assistant operating inside a strictly air-gapped environment. Provide accurate, clear, and concise answers. Never claim to have access to external real-time web data or external services. Adhere to user safety and security guidelines.",
+  "user_template": "{input_text}",
+  "parameters": {
+    "temperature": 0.7,
+    "max_tokens": 1024,
+    "top_p": 0.95
+  }
+}

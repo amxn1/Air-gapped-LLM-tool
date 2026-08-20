@@ -1,0 +1,190 @@
+.upload-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.upload-modal {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.um-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.um-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.um-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  color: #6c757d;
+}
+
+.um-close:hover {
+  color: #333;
+}
+
+.um-form {
+  padding: 20px;
+}
+
+.um-field {
+  margin-bottom: 20px;
+}
+
+.um-field label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.um-field input[type="file"] {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.um-field input[type="file"]:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.um-file-info {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+/* Upload Modal Styles */
+.um-error {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 10px 0;
+  border: 1px solid #f5c6cb;
+}
+
+/* Enhanced error handling */
+.um-error-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  margin: 10px 0;
+}
+
+.um-error-icon {
+  font-size: 1.25rem;
+  color: #721c24;
+}
+
+.um-error-message {
+  color: #721c24;
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.um-retry-button {
+  padding: 6px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.um-retry-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.um-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.um-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.um-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.um-cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.um-cancel:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.um-submit {
+  background-color: #28a745;
+  color: white;
+}
+
+.um-submit:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.um-submit[disabled]:hover {
+  background-color: #28a745;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .upload-modal {
+    width: 95%;
+    margin: 10px;
+  }
+
+  .um-actions {
+    flex-direction: column;
+  }
+
+  .um-btn {
+    width: 100%;
+  }
+}

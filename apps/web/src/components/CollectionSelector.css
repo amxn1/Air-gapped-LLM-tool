@@ -1,0 +1,23 @@
+.collection-selector {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.collection-selector:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .collection-selector {
+    padding: 10px 15px;
+    font-size: 1rem;
+  }
+}

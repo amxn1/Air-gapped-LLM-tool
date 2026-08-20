@@ -1,0 +1,29 @@
+groups:
+  - name: offline_assistant_alerts
+    rules:
+      - alert: OfflineApiDown
+        expr: up{job="offline_api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Offline LLM Assistant API is unreachable"
+          description: "The core FastAPI service container on port 8000 has stopped responding."
+
+      - alert: HighInferenceLatency
+        expr: http_request_duration_seconds{job="offline_api", path=~"/v1/chat.*"} > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High LLM token generation latency"
+          description: "Inference response times have exceeded 30 seconds."
+
+      - alert: VectorStoreUnavailable
+        expr: up{job="qdrant_vector_store"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Qdrant vector store is offline"
+          description: "Vector search queries are operating in local in-memory fallback mode."

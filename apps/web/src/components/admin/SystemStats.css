@@ -1,0 +1,143 @@
+.system-stats {
+  width: 100%;
+}
+
+.stats-header {
+  margin-bottom: 30px;
+}
+
+.stats-header h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.stats-timestamp {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.stats-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border: 1px solid #eee;
+}
+
+.stats-card h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-card h4::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-color: #007bff;
+  border-radius: 50%;
+}
+
+.stats-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #007bff;
+  margin: 15px 0;
+}
+
+.stats-label {
+  color: #6c757d;
+  font-size: 1rem;
+  margin-bottom: 15px;
+}
+
+.stats-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.stats-details span {
+  background-color: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+/* Loading and error states */
+.stats-loading,
+.stats-error,
+.stats-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  text-align: center;
+}
+
+.stats-loading {
+  color: #6c757d;
+}
+
+.stats-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.stats-error {
+  color: #dc3545;
+}
+
+.stats-empty {
+  color: #6c757d;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .stats-value {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-card {
+    padding: 15px;
+  }
+
+  .stats-value {
+    font-size: 1.8rem;
+  }
+}

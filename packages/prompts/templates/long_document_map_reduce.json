@@ -1,0 +1,15 @@
+{
+  "name": "long_document_map_reduce",
+  "version": "1.0.0",
+  "description": "Two-phase map-reduce summarization for large documents preserving section references",
+  "map_system_prompt": "You are a factual summarizer processing an excerpt of a larger document. Summarize the key facts, findings, and statements in this section. Maintain exact references to section titles, metrics, or page references.",
+  "map_user_template": "Summarize this document section ({section_info}):\n\n---\n{chunk_text}\n---",
+  "reduce_system_prompt": "You are an executive synthesizer. Combine the following section summaries of a long document into a unified, coherent, and comprehensive final document summary. Group related topics, eliminate redundancies, and cite contributing section headings where relevant.",
+  "reduce_user_template": "Synthesize these section summaries into a final coherent document summary:\n\n{section_summaries}",
+  "parameters": {
+    "temperature": 0.25,
+    "map_max_tokens": 256,
+    "reduce_max_tokens": 1024,
+    "top_p": 0.9
+  }
+}
