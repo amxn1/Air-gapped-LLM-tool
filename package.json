@@ -1,0 +1,10 @@
+{
+  "name": "lullabay-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix offline-llm-assistant/apps/web run dev",
+    "build": "npm --prefix offline-llm-assistant/apps/web run build",
+    "preview": "npm --prefix offline-llm-assistant/apps/web run preview"
+  }
+}
