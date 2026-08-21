@@ -4,6 +4,7 @@ llm-env/
 .venv/
 env/
 venv/
+dist/
 
 # Python cache & build
 __pycache__/
@@ -31,3 +32,5 @@ error*.txt
 gui_*.txt
 sandbox_*.txt
 .system_generated/
+.DS_Store
+Thumbs.db

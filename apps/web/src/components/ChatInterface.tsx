@@ -33,26 +33,14 @@ const ChatInterface: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [models, setModels] = useState<ModelItem[]>([
-    { id: 'llama3.2:1b', name: 'llama3.2:1b (Meta / Local Ollama - Active)', status: 'active' },
-    { id: 'llama3.2:3b', name: 'llama3.2:3b (Meta)', status: 'staged' },
-    { id: 'llama3.1:8b', name: 'llama3.1:8b (Meta)', status: 'staged' },
-    { id: 'llama3.3:70b', name: 'llama3.3:70b (Meta)', status: 'staged' },
-    { id: 'deepseek-r1:7b', name: 'deepseek-r1:7b (Reasoning)', status: 'staged' },
-    { id: 'mistral-7b-instruct', name: 'mistral-7b-instruct (Mistral AI)', status: 'staged' },
-    { id: 'qwen2.5:7b', name: 'qwen2.5:7b (Alibaba)', status: 'staged' },
+    { id: 'llama3.2:3b', name: 'llama3.2:3b (Meta)', status: 'active' },
+    { id: 'phi3.5:latest', name: 'phi3.5:latest (Microsoft / PDF)', status: 'active' },
+    { id: 'qwen2.5-coder:1.5b', name: 'qwen2.5-coder:1.5b (Coding)', status: 'active' },
+    { id: 'deepseek-r1:1.5b', name: 'deepseek-r1:1.5b (Reasoning)', status: 'active' },
+    { id: 'llama3:latest', name: 'llama3:latest (Local Active)', status: 'active' },
+    { id: 'gemma4:26b', name: 'gemma4:26b (Google / Local Active)', status: 'active' },
   ]);
-  const [selectedModel, setSelectedModel] = useState<string>('llama3.2:1b');
-
-  // Ollama Live Connection State
-  const [ollamaStatus, setOllamaStatus] = useState<{
-    online: boolean;
-    activeModel: string;
-    installedModels: string[];
-  }>({
-    online: true,
-    activeModel: 'llama3.2:1b',
-    installedModels: ['llama3.2:1b'],
-  });
+  const [selectedModel, setSelectedModel] = useState<string>('llama3.2:3b');
 
   // Attached files for current draft
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -68,9 +56,6 @@ const ChatInterface: React.FC = () => {
   // Collections for Grounded RAG
   const [collections, setCollections] = useState<Collection[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
-
-  // Workspace Mode (General RAG, Summarization, Science, News, Rewriter)
-  const [workspaceMode, setWorkspaceMode] = useState<string>('chat');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -103,20 +88,10 @@ const ChatInterface: React.FC = () => {
 
   const checkOllamaAndModels = async () => {
     try {
-      const [statusRes, modelsRes, colsRes] = await Promise.all([
-        fetch('http://localhost:8000/v1/models/status'),
+      const [modelsRes, colsRes] = await Promise.all([
         fetch('http://localhost:8000/v1/models'),
         fetch('http://localhost:8000/v1/collections/'),
       ]);
-
-      if (statusRes.ok) {
-        const sData = await statusRes.json();
-        setOllamaStatus({
-          online: sData.ollama_online,
-          activeModel: sData.active_model || 'llama3.2:1b',
-          installedModels: sData.installed_models || ['llama3.2:1b'],
-        });
-      }
 
       if (modelsRes.ok) {
         const modelData = await modelsRes.json();
@@ -127,24 +102,31 @@ const ChatInterface: React.FC = () => {
             const modelId = m.model_name || m.id;
             if (modelId && !seen.has(modelId)) {
               seen.add(modelId);
+              const isActive = m.status === 'active';
               list.push({
                 id: modelId,
-                name: modelId === 'llama3.2:1b' ? `${modelId} (Meta / Local Ollama - Active)` : modelId,
+                name: isActive ? `🟢 ${modelId} (Active)` : modelId,
                 format: m.format,
                 quantization: m.quantization,
                 status: m.status,
               });
             }
           }
+
+          // Sort: active models first
+          list.sort((a, b) => {
+            if (a.status === 'active' && b.status !== 'active') return -1;
+            if (b.status === 'active' && a.status !== 'active') return 1;
+            return 0;
+          });
+
           if (list.length > 0) {
             setModels(list);
-            // Default to llama3.2:1b if available
-            const hasLlama1b = list.some((m) => m.id === 'llama3.2:1b');
-            if (hasLlama1b) {
-              setSelectedModel('llama3.2:1b');
-            } else {
-              setSelectedModel(list[0].id);
-            }
+            const bestMatch =
+              list.find((m) => m.id === 'llama3.2:3b' && m.status === 'active') ||
+              list.find((m) => m.status === 'active') ||
+              list[0];
+            setSelectedModel(bestMatch.id);
           }
         }
       }
@@ -160,8 +142,6 @@ const ChatInterface: React.FC = () => {
 
   useEffect(() => {
     checkOllamaAndModels();
-    const interval = setInterval(checkOllamaAndModels, 15000);
-    return () => clearInterval(interval);
   }, []);
 
   // Load conversation history from localStorage
@@ -176,20 +156,24 @@ const ChatInterface: React.FC = () => {
     }
   }, []);
 
-  // Save conversation history to localStorage
+  // Persist conversation history to localStorage
   useEffect(() => {
     localStorage.setItem('chatMessages', JSON.stringify(messages));
   }, [messages]);
 
+  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  // Adjust textarea height automatically
+  // Auto-grow textarea height
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+      textareaRef.current.style.height = `${Math.min(
+        textareaRef.current.scrollHeight,
+        180
+      )}px`;
     }
   }, [input]);
 
@@ -204,6 +188,7 @@ const ChatInterface: React.FC = () => {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  // Drag and Drop handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -223,8 +208,8 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  const handleSend = async (customPrompt?: string) => {
-    const userText = (customPrompt || input).trim();
+  const handleSend = async (overrideText?: string) => {
+    const userText = (overrideText !== undefined ? overrideText : input).trim();
     if ((!userText && attachedFiles.length === 0) || isLoading) return;
 
     setIsLoading(true);
@@ -261,7 +246,6 @@ const ChatInterface: React.FC = () => {
         console.warn('Document upload warning:', uploadErr);
       }
 
-      // If backend didn't return text (e.g. offline/network issue) and file is text-based, read directly in browser
       if (
         !docText &&
         (f.name.endsWith('.txt') ||
@@ -286,17 +270,14 @@ const ChatInterface: React.FC = () => {
       }
     }
 
-    // If active document context is selected from Document Management
     if (activeDocContext && !textContext) {
       if (activeDocContext.content) {
-        textContext += `\n\n--- [Attached Document: ${activeDocContext.filename}] ---\n${activeDocContext.content}`;
-      } else {
-        textContext += `\n\n[Referenced Document: ${activeDocContext.filename}]`;
+        textContext += `\n\n--- [Active Document Focus: ${activeDocContext.filename}] ---\n${activeDocContext.content}`;
       }
     }
 
-    const fullPrompt = textContext
-      ? `${userText || 'Please analyze and explain the document.'}${textContext}`
+    const promptWithContext = textContext
+      ? `${userText ? userText + '\n\n' : ''}Context & Attached Documents:\n${textContext}`
       : userText;
 
     const userMessage: Message = {
@@ -308,15 +289,14 @@ const ChatInterface: React.FC = () => {
     setMessages((prev) => [...prev, userMessage]);
     setAttachedFiles([]);
 
-    // 2. Dispatch request to backend with full grounded context
     try {
-      const historyForApi = messages.map((m) => ({
+      const messagesPayload = messages.map((m) => ({
         role: m.role,
         content: m.content,
       }));
-      historyForApi.push({
+      messagesPayload.push({
         role: 'user',
-        content: fullPrompt,
+        content: promptWithContext,
       });
 
       const res = await fetch('http://localhost:8000/v1/chat/completions', {
@@ -324,9 +304,9 @@ const ChatInterface: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: selectedModel,
-          messages: historyForApi,
+          messages: messagesPayload,
           collection_id: selectedCollectionId || undefined,
-          task_mode: workspaceMode,
+          task_mode: 'chat',
           stream: false,
         }),
       });
@@ -334,7 +314,9 @@ const ChatInterface: React.FC = () => {
       if (!res.ok) throw new Error(`HTTP error ${res.status}`);
       const data = await res.json();
       const assistantMsg =
-        data.choices?.[0]?.message?.content || 'No response generated.';
+        data.choices?.[0]?.message?.content ||
+        data.content ||
+        'No response generated.';
       setMessages((prev) => [
         ...prev,
         {
@@ -349,7 +331,7 @@ const ChatInterface: React.FC = () => {
         ...prev,
         {
           role: 'assistant',
-          content: `⚠️ Error executing request: ${err.message}. Please verify local backend connection.`,
+          content: `⚠️ Error executing request: ${err.message}. Please check connection to local backend services.`,
         },
       ]);
     } finally {
@@ -364,13 +346,6 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  const clearChat = () => {
-    if (window.confirm('Clear current chat conversation?')) {
-      setMessages([]);
-      localStorage.removeItem('chatMessages');
-    }
-  };
-
   return (
     <div
       className="chat-container"
@@ -378,54 +353,6 @@ const ChatInterface: React.FC = () => {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Top Workspace Controls Bar */}
-      <div className="chat-controls-bar">
-        <div className="control-group">
-          <label htmlFor="workspace-mode-select">WORKSPACE MODE:</label>
-          <select
-            id="workspace-mode-select"
-            value={workspaceMode}
-            onChange={(e) => setWorkspaceMode(e.target.value)}
-          >
-            <option value="chat">🔮 General Assistant & RAG</option>
-            <option value="summarize">📄 Document Summarization</option>
-            <option value="science">🔬 Science & Technology Analysis</option>
-            <option value="news">📰 News & Editorial Briefing</option>
-            <option value="rewriter">✍️ Context Rewriter & Grammar</option>
-          </select>
-        </div>
-
-        {/* Live Ollama & Model Status Pill */}
-        <div className="ollama-live-status">
-          <span className={`status-dot ${ollamaStatus.online ? 'dot-online' : 'dot-offline'}`}></span>
-          <span className="status-label">
-            {ollamaStatus.online
-              ? `Ollama: ${selectedModel} (Live)`
-              : 'Ollama Offline (Using resilient engine)'}
-          </span>
-          <button
-            type="button"
-            className="status-refresh-btn"
-            onClick={checkOllamaAndModels}
-            title="Refresh local model status"
-          >
-            🔄
-          </button>
-        </div>
-
-        {/* Clear Chat Button */}
-        {messages.length > 0 && (
-          <button
-            type="button"
-            className="clear-chat-btn"
-            onClick={clearChat}
-            title="Clear current conversation"
-          >
-            🗑️ Clear Chat
-          </button>
-        )}
-      </div>
-
       {/* Active Document Context Banner (if pre-selected) */}
       {activeDocContext && (
         <div className="active-doc-banner">

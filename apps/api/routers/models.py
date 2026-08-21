@@ -2,7 +2,8 @@
 Model registry management endpoints.
 """
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -19,7 +20,6 @@ from services.inference.model_manager import (
     rollback_model_profile,
     get_active_model_profile,
 )
-import httpx
 from ..services.llama_service import LlamaService
 
 router = APIRouter(
@@ -54,64 +54,54 @@ async def get_models_status(db: Session = Depends(get_db)):
     }
 
 
-@router.get("", response_model=List[ModelProfileResponse])
-async def get_models(db: Session = Depends(get_db)):
-    """Return a list of all model profiles in the registry with live Ollama detection."""
-    # Detect live Ollama models
-    installed_names = set()
+async def _sync_ollama_models(db: Session):
+    """Auto-discover locally installed models in Ollama daemon and synchronize."""
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
-            res = await client.get("http://127.0.0.1:11434/api/tags")
+            res = await client.get("http://localhost:11434/api/tags")
             if res.status_code == 200:
-                for m in res.json().get("models", []):
-                    if m.get("name"):
-                        installed_names.add(m.get("name"))
+                ollama_models = res.json().get("models", [])
+                installed_names = set()
+                for om in ollama_models:
+                    m_name = om.get("name")
+                    if not m_name:
+                        continue
+                    installed_names.add(m_name)
+                    existing = db.query(models.ModelProfile).filter(models.ModelProfile.model_name == m_name).first()
+                    if not existing:
+                        details = om.get("details", {})
+                        new_profile = models.ModelProfile(
+                            model_name=m_name,
+                            version="1.0",
+                            format=str(details.get("format", "GGUF")).upper(),
+                            quantization=str(details.get("quantization_level", "q4_k_m")),
+                            context_length=8192,
+                            max_output=2048,
+                            hardware_profile="Ollama Local",
+                            status="active"
+                        )
+                        db.add(new_profile)
+                    else:
+                        existing.status = "active"
+
+                # Remove any stale staged models that do not exist locally
+                for db_model in db.query(models.ModelProfile).all():
+                    if db_model.model_name not in installed_names and db_model.hardware_profile == "Ollama Local":
+                        db.delete(db_model)
+
+                db.commit()
     except Exception:
         pass
 
-    profiles = db.query(models.ModelProfile).all()
-    if not profiles:
-        # Seed default profile if empty
-        default_model = models.ModelProfile(
-            model_name="llama3.2:1b",
-            version="3.2",
-            format="Ollama / GGUF",
-            quantization="q4_K_M",
-            context_length=128000,
-            max_output=4096,
-            hardware_profile="CPU/GPU",
-            status="active"
-        )
-        db.add(default_model)
-        db.commit()
-        db.refresh(default_model)
-        profiles = [default_model]
 
-    # Ensure llama3.2:1b exists in DB
-    has_llama1b = any(p.model_name == "llama3.2:1b" for p in profiles)
-    if not has_llama1b and "llama3.2:1b" in installed_names:
-        new_prof = models.ModelProfile(
-            model_name="llama3.2:1b",
-            version="3.2",
-            format="Ollama / GGUF",
-            quantization="q4_K_M",
-            context_length=128000,
-            max_output=4096,
-            hardware_profile="CPU/GPU",
-            status="active"
-        )
-        db.add(new_prof)
-        db.commit()
-        db.refresh(new_prof)
-        profiles.append(new_prof)
-
-    # Sort installed models (and llama3.2:1b) first
-    def sort_key(p):
-        is_installed = p.model_name in installed_names or "llama3.2:1b" in p.model_name
-        is_active = p.status == "active"
-        return (0 if is_installed else 1, 0 if is_active else 1, p.id)
-
-    profiles.sort(key=sort_key)
+@router.get("", response_model=List[ModelProfileResponse])
+async def get_models(status: Optional[str] = None, db: Session = Depends(get_db)):
+    """Return a list of available model profiles in the registry."""
+    await _sync_ollama_models(db)
+    query = db.query(models.ModelProfile)
+    if status:
+        query = query.filter(models.ModelProfile.status == status)
+    profiles = query.all()
     return profiles
 
 
@@ -159,7 +149,7 @@ def rollback_model(model_id: int, db: Session = Depends(get_db)):
     profile = rollback_model_profile(db, model_id)
     if not profile:
         raise HTTPException(status_code=400, detail="No previous model profile available for rollback")
-    db_obj = db.query(models.ModelProfile).filter(models.ModelProfile.id == profile.id).first()
+    db_obj = db.query(models.ModelProfile).filter(models.ModelProfile.id == model_id).first()
     return db_obj
 
 
