@@ -30,6 +30,7 @@ class InferenceService:
         stop: Optional[List[str]] = None,
         stream: bool = False,
         db: Optional[Session] = None,
+        messages: Optional[List[Dict[str, str]]] = None,
     ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
         """
         Generate text using the specified model.
@@ -43,6 +44,7 @@ class InferenceService:
             stop: List of stop sequences
             stream: Whether to stream the response
             db: Database session (required if model_id is None to fetch active model)
+            messages: Optional structured chat message history
 
         Returns:
             Either a dict with the full response or an async generator for streaming
@@ -72,6 +74,7 @@ class InferenceService:
             top_p=top_p,
             stop=stop,
             stream=stream,
+            messages=messages,
         )
 
     async def embed_text(

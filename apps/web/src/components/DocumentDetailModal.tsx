@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './DocumentDetailModal.css';
 
 type Document = {
@@ -23,6 +24,7 @@ type DocumentDetailModalProps = {
 
 const DocumentDetailModal: React.FC<DocumentDetailModalProps> =
   ({ isOpen, onClose, documentId }) => {
+  const navigate = useNavigate();
   if (!isOpen || documentId === null) return null;
 
   const [document, setDocument] = useState<Document | null>(null);
@@ -203,10 +205,19 @@ const DocumentDetailModal: React.FC<DocumentDetailModalProps> =
 
           <div className="detail-modal-actions">
             <button
+              className="detail-modal-btn"
+              style={{ background: '#2563eb', color: '#ffffff', fontWeight: 600 }}
+              onClick={() => {
+                onClose();
+                navigate(`/?docId=${document.id}&docName=${encodeURIComponent(document.original_filename)}`);
+              }}
+            >
+              💬 Ask Llama 3.2 about this Document
+            </button>
+            <button
               className="detail-modal-btn detail-modal-download"
               onClick={() => {
-                // In a real implementation, this would trigger a download
-                alert(`Downloading ${document.original_filename}`);
+                window.open(`http://localhost:8000/v1/documents/${document.id}/download`, '_blank');
               }}
             >
               Download Original File

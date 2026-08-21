@@ -168,6 +168,9 @@ class IngestionWorker:
 
             result["success"] = True
             result["chunks_created"] = len(chunks)
+            result["extracted_text"] = extracted_text
+            result["preview"] = extracted_text[:500] + ("..." if len(extracted_text) > 500 else "")
+            result["total_pages"] = extraction_result.get("metadata", {}).get("page_count", len(extraction_result.get("pages", [])))
             logger.info(f"Successfully ingested document {result['document_id']} with {len(chunks)} chunks")
 
         except Exception as e:

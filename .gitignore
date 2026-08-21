@@ -1,1 +1,33 @@
+# Dependencies
 node_modules/
+llm-env/
+.venv/
+env/
+venv/
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Databases and user uploaded storage
+*.db
+*.sqlite3
+storage/
+uploaded_files/
+
+# Large model checkpoints and raw dataset dumps
+checkpoints/
+data/raw/openwebtext.txt
+
+# Temporary logs & debug output dumps
+*.log
+error*.txt
+gui_*.txt
+sandbox_*.txt
+.system_generated/

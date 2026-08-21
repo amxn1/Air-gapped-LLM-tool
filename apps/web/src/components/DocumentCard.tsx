@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CollectionSelector from './CollectionSelector';
 import './DocumentCard.css';
 
@@ -19,10 +20,12 @@ type Document = {
 type DocumentCardProps = {
   document: Document;
   onDocumentUpdated?: () => void;
+  onViewDocument?: (documentId: number) => void;
 };
 
 const DocumentCard: React.FC<DocumentCardProps> =
-  ({ document, onDocumentUpdated }) => {
+  ({ document, onDocumentUpdated, onViewDocument }) => {
+  const navigate = useNavigate();
   const [moveToCollectionId, setMoveToCollectionId] = useState<number | null>(null);
   const [moveToCollectionLoading, setMoveToCollectionLoading] = useState(false);
   const [moveToCollectionError, setMoveToCollectionError] = useState<string | null>(null);
@@ -85,7 +88,6 @@ const DocumentCard: React.FC<DocumentCardProps> =
         throw new Error(`Failed to move document: ${response.status}`);
       }
 
-      // Success
       setMoveToCollectionLoading(false);
       setMoveToCollectionId(null);
       if (onDocumentUpdated) {
@@ -96,6 +98,26 @@ const DocumentCard: React.FC<DocumentCardProps> =
       setMoveToCollectionLoading(false);
       setMoveToCollectionError('Failed to move document');
     }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(`Permanently delete '${document.original_filename}' and its embeddings?`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:8000/v1/documents/${document.id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok && onDocumentUpdated) {
+        onDocumentUpdated();
+      }
+    } catch (err) {
+      console.error('Error deleting document:', err);
+    }
+  };
+
+  const handleDownload = () => {
+    window.open(`http://localhost:8000/v1/documents/${document.id}/download`, '_blank');
   };
 
   return (
@@ -141,31 +163,32 @@ const DocumentCard: React.FC<DocumentCardProps> =
 
       <div className="dc-actions">
         <button
+          className="dc-btn dc-chat"
+          style={{ background: '#2563eb', color: '#ffffff', fontWeight: 600 }}
+          onClick={() => navigate(`/?docId=${document.id}&docName=${encodeURIComponent(document.original_filename)}`)}
+          title="Open in Chat and ask Llama about this document"
+        >
+          💬 Ask LLM
+        </button>
+        <button
           className="dc-btn dc-view"
           onClick={() => {
-            // View document details
-            alert(`Viewing document: ${document.original_filename}`);
+            if (onViewDocument) {
+              onViewDocument(document.id);
+            }
           }}
         >
           View
         </button>
         <button
           className="dc-btn dc-download"
-          onClick={() => {
-            // Download document
-            alert(`Downloading document: ${document.original_filename}`);
-          }}
+          onClick={handleDownload}
         >
           Download
         </button>
         <button
           className="dc-btn dc-delete"
-          onClick={() => {
-            if (window.confirm(`Delete ${document.original_filename}?`)) {
-              // Delete document
-              alert(`Deleted document: ${document.original_filename}`);
-            }
-          }}
+          onClick={handleDelete}
         >
           Delete
         </button>

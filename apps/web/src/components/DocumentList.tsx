@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DocumentCard from './DocumentCard';
+import DocumentDetailModal from './DocumentDetailModal';
 import './DocumentList.css';
 
 type Document = {
@@ -34,6 +35,8 @@ const DocumentList: React.FC<DocumentListProps> =
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [filters, setFilters] = useState<Filters>({
     search: '',
     status: 'all',
@@ -225,6 +228,10 @@ const DocumentList: React.FC<DocumentListProps> =
             key={doc.id}
             document={doc}
             onDocumentUpdated={fetchDocuments}
+            onViewDocument={(id) => {
+              setSelectedDocId(id);
+              setIsDetailModalOpen(true);
+            }}
           />
         ))}
         {documents.length === 0 && (
@@ -238,6 +245,15 @@ const DocumentList: React.FC<DocumentListProps> =
           </div>
         )}
       </div>
+
+      <DocumentDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedDocId(null);
+        }}
+        documentId={selectedDocId}
+      />
     </div>
   );
 };

@@ -9,12 +9,12 @@ from services.retrieval.vector_store import VectorStore
 import time
 
 router = APIRouter(
-    prefix="/health",
     tags=["health"],
 )
 
 
-@router.get("")
+@router.get("/health")
+@router.get("/v1/health")
 async def health_check(db: Session = Depends(get_db)):
     """
     Comprehensive health check verifying PostgreSQL database, vector store, and model subsystem.

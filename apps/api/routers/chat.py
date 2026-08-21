@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 import uuid
 from typing import AsyncGenerator, Dict, Any, List, Optional
@@ -45,8 +46,7 @@ async def create_chat_completion(
         model_profile = None
         if request.model:
             model_profile = db.query(models.ModelProfile).filter(
-                models.ModelProfile.model_name == request.model,
-                models.ModelProfile.status == "active"
+                models.ModelProfile.model_name == request.model
             ).first()
 
         if not model_profile:
@@ -55,17 +55,78 @@ async def create_chat_completion(
             ).first()
 
         model_id = model_profile.id if model_profile else None
-        model_name = model_profile.model_name if model_profile else (request.model or "llama-2-7b-chat")
+        model_name = request.model or (model_profile.model_name if model_profile else "llama3.2:1b")
 
-        # Extract latest user message for retrieval
+        # Extract latest user message
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         latest_user_message = user_messages[-1].content if user_messages else ""
 
-        # Perform RAG retrieval if collection_id specified or if collections exist
         citations: List[CitationReference] = []
         augmented_messages = []
 
-        if latest_user_message:
+        # Check if direct document attachment is in the latest user message
+        is_direct_doc = "--- [attached document:" in latest_user_message.lower()
+        doc_matches = []
+        if is_direct_doc:
+            doc_matches = re.findall(
+                r"---\s*\[Attached Document:\s*(.*?)\]\s*---\s*\n(.*?)(?=(?:\n--- \[Attached Document:|\Z))",
+                latest_user_message,
+                re.DOTALL | re.IGNORECASE
+            )
+
+        if doc_matches:
+            # 1. Direct Document Analysis & Summarization Flow
+            doc_name, doc_content = doc_matches[0]
+            clean_user_q = re.sub(
+                r"---\s*\[Attached Document:.*?\]\s*---\s*\n.*",
+                "",
+                latest_user_message,
+                flags=re.DOTALL | re.IGNORECASE
+            ).strip()
+
+            if not clean_user_q or clean_user_q.startswith("Attached ") or "please analyze" in clean_user_q.lower():
+                if request.task_mode == "summarize":
+                    clean_user_q = "Please provide a comprehensive structured summary of this document, including document overview, key findings, and main points."
+                elif request.task_mode == "science":
+                    clean_user_q = "Please analyze the scientific methodology, technical principles, and key data points in this document."
+                elif request.task_mode == "news":
+                    clean_user_q = "Please provide an executive editorial brief and key takeaways from this document."
+                elif request.task_mode == "rewriter":
+                    clean_user_q = "Please review and polish the text in this document for optimal clarity and grammar."
+                else:
+                    clean_user_q = "Please summarize and explain the key contents of this document."
+
+            system_instruction = (
+                "You are an expert document reading and analysis assistant operating in an offline environment.\n"
+                "Your task is to carefully read the provided document and answer the user's request accurately based strictly on what is written.\n"
+                "- If asked to summarize, produce a structured summary: Document Overview, Key Highlights & Sections, and Important Details.\n"
+                "- If the document contains placeholder text (such as Lorem Ipsum / sample text), state that clearly.\n"
+                "- If asked a specific question, answer it directly using evidence from the document text.\n"
+                "- Do not invent facts or extrapolate beyond what is stated in the document."
+            )
+
+            formatted_user_prompt = (
+                f"=== DOCUMENT: {doc_name.strip()} ===\n"
+                f"{doc_content.strip()}\n\n"
+                f"=== USER REQUEST ===\n"
+                f"{clean_user_q}"
+            )
+
+            augmented_messages = [
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": formatted_user_prompt}
+            ]
+
+            citations.append(CitationReference(
+                document_id=1,
+                filename=doc_name.strip(),
+                page_or_section="Attached Document",
+                excerpt=doc_content.strip()[:250] + ("..." if len(doc_content.strip()) > 250 else ""),
+                score=1.0
+            ))
+
+        elif latest_user_message:
+            # 2. Grounded RAG Knowledge Base Retrieval Flow
             retrieved_chunks = await retrieval_service.retrieve_relevant_chunks(
                 query=latest_user_message,
                 limit=5,
@@ -82,27 +143,38 @@ async def create_chat_completion(
                         score=c.get("score")
                     ))
 
-                # Inject evidence context into user prompt using RAG format
-                rag_prompt_data = llama_service.prompt_manager.build_rag_prompt(
-                    query=latest_user_message,
-                    chunks=retrieved_chunks
+                evidence_text = "\n\n".join([
+                    f"--- Evidence Item [{i+1}] ---\nSource: {c.get('filename')}\nSection/Page: {c.get('page_or_section')}\nContent:\n{c.get('text', '')}"
+                    for i, c in enumerate(retrieved_chunks)
+                ])
+
+                system_instruction = (
+                    "You are a grounded knowledge assistant operating in an offline environment.\n"
+                    "Answer the user's question using ONLY the provided evidence passages in <retrieved_context>.\n"
+                    "Every statement of fact should cite the relevant source document [Source: <filename>, Section: <page_or_section>].\n"
+                    "If the provided context does not contain sufficient evidence, state that clearly."
                 )
 
-                for msg in request.messages:
-                    if msg.role == "user" and msg.content == latest_user_message:
-                        augmented_messages.append({"role": "user", "content": rag_prompt_data["user_prompt"]})
-                    else:
-                        augmented_messages.append({"role": msg.role, "content": msg.content})
+                formatted_user_prompt = (
+                    f"<retrieved_context>\n{evidence_text}\n</retrieved_context>\n\n"
+                    f"User Question:\n{latest_user_message}"
+                )
+
+                augmented_messages = [
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": formatted_user_prompt}
+                ]
             else:
                 augmented_messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         else:
             augmented_messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
 
-        # Generate completion
+        # Generate completion with low temperature for high fidelity
+        effective_temp = request.temperature if request.temperature is not None else 0.1
         result = await llama_service.generate_chat_response(
             messages=augmented_messages,
             model_id=model_id,
-            temperature=request.temperature or 0.7,
+            temperature=effective_temp,
             max_tokens=request.max_tokens or 1024,
             stream=request.stream or False,
             task_mode=request.task_mode or "chat"

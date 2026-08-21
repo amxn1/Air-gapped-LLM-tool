@@ -19,6 +19,7 @@ from services.inference.model_manager import (
     rollback_model_profile,
     get_active_model_profile,
 )
+import httpx
 from ..services.llama_service import LlamaService
 
 router = APIRouter(
@@ -27,19 +28,57 @@ router = APIRouter(
 )
 
 
+@router.get("/status")
+async def get_models_status(db: Session = Depends(get_db)):
+    """Return live status of Ollama connection and installed models."""
+    ollama_online = False
+    installed_models = []
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            res = await client.get("http://127.0.0.1:11434/api/tags")
+            if res.status_code == 200:
+                ollama_online = True
+                installed_models = [m.get("name") for m in res.json().get("models", []) if m.get("name")]
+    except Exception:
+        pass
+
+    active_profile = db.query(models.ModelProfile).filter(models.ModelProfile.status == "active").first()
+    active_name = active_profile.model_name if active_profile else (installed_models[0] if installed_models else "llama3.2:1b")
+
+    return {
+        "ollama_online": ollama_online,
+        "ollama_url": "http://127.0.0.1:11434",
+        "installed_models": installed_models,
+        "active_model": active_name,
+        "recommended_model": "llama3.2:1b",
+    }
+
+
 @router.get("", response_model=List[ModelProfileResponse])
-def get_models(db: Session = Depends(get_db)):
-    """Return a list of all model profiles in the registry."""
+async def get_models(db: Session = Depends(get_db)):
+    """Return a list of all model profiles in the registry with live Ollama detection."""
+    # Detect live Ollama models
+    installed_names = set()
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            res = await client.get("http://127.0.0.1:11434/api/tags")
+            if res.status_code == 200:
+                for m in res.json().get("models", []):
+                    if m.get("name"):
+                        installed_names.add(m.get("name"))
+    except Exception:
+        pass
+
     profiles = db.query(models.ModelProfile).all()
     if not profiles:
         # Seed default profile if empty
         default_model = models.ModelProfile(
-            model_name="llama-2-7b-chat",
-            version="2.0",
-            format="GGUF",
-            quantization="q4_0",
-            context_length=4096,
-            max_output=1024,
+            model_name="llama3.2:1b",
+            version="3.2",
+            format="Ollama / GGUF",
+            quantization="q4_K_M",
+            context_length=128000,
+            max_output=4096,
             hardware_profile="CPU/GPU",
             status="active"
         )
@@ -47,6 +86,32 @@ def get_models(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(default_model)
         profiles = [default_model]
+
+    # Ensure llama3.2:1b exists in DB
+    has_llama1b = any(p.model_name == "llama3.2:1b" for p in profiles)
+    if not has_llama1b and "llama3.2:1b" in installed_names:
+        new_prof = models.ModelProfile(
+            model_name="llama3.2:1b",
+            version="3.2",
+            format="Ollama / GGUF",
+            quantization="q4_K_M",
+            context_length=128000,
+            max_output=4096,
+            hardware_profile="CPU/GPU",
+            status="active"
+        )
+        db.add(new_prof)
+        db.commit()
+        db.refresh(new_prof)
+        profiles.append(new_prof)
+
+    # Sort installed models (and llama3.2:1b) first
+    def sort_key(p):
+        is_installed = p.model_name in installed_names or "llama3.2:1b" in p.model_name
+        is_active = p.status == "active"
+        return (0 if is_installed else 1, 0 if is_active else 1, p.id)
+
+    profiles.sort(key=sort_key)
     return profiles
 
 

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import shutil
 from pathlib import Path
 import uuid
@@ -45,12 +45,16 @@ async def upload_document(
     """
     Upload a document and trigger offline ingestion pipeline (TXT, MD, PDF, DOCX, HTML).
     """
-    allowed_extensions = {".txt", ".pdf", ".docx", ".md", ".markdown", ".html", ".htm"}
+    allowed_extensions = {
+        ".txt", ".pdf", ".docx", ".doc", ".md", ".markdown", ".html", ".htm",
+        ".json", ".jsonl", ".csv", ".tsv", ".py", ".js", ".ts", ".jsx", ".tsx",
+        ".log", ".yaml", ".yml", ".ini", ".env", ".sql", ".sh", ".c", ".cpp", ".h"
+    }
     file_extension = Path(file.filename).suffix.lower()
     if file_extension not in allowed_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file type. Allowed: {', '.join(allowed_extensions)}"
+            detail=f"Unsupported file type '{file_extension}'. Supported: PDF, Word, Markdown, Text, Code, CSV, JSON."
         )
 
     unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
@@ -82,7 +86,10 @@ async def upload_document(
                 "message": "Document uploaded and processed successfully",
                 "document_id": result["document_id"],
                 "filename": file.filename,
-                "chunks_created": result["chunks_created"]
+                "chunks_created": result["chunks_created"],
+                "extracted_text": result.get("extracted_text", ""),
+                "preview": result.get("preview", ""),
+                "total_pages": result.get("total_pages", 1),
             }
         )
     except HTTPException:
@@ -243,3 +250,56 @@ def get_document_chunks(
         models.DocumentChunk.document_id == document_id
     ).order_by(models.DocumentChunk.chunk_index).all()
     return chunks
+
+
+@router.get("/{document_id}/content")
+def get_document_content(
+    document_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Get full extracted text and chunk summaries for a specific document.
+    """
+    document = db.query(models.Document).filter(
+        models.Document.id == document_id
+    ).first()
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    chunks = db.query(models.DocumentChunk).filter(
+        models.DocumentChunk.document_id == document_id
+    ).order_by(models.DocumentChunk.chunk_index).all()
+
+    full_text = "\n\n".join([c.text for c in chunks if c.text])
+    return {
+        "document_id": document.id,
+        "filename": document.original_filename,
+        "media_type": document.media_type,
+        "import_status": document.import_status,
+        "chunks_count": len(chunks),
+        "content": full_text
+    }
+
+
+@router.get("/{document_id}/download")
+def download_document_file(
+    document_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Download the original uploaded document file.
+    """
+    document = db.query(models.Document).filter(
+        models.Document.id == document_id
+    ).first()
+    if document is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if not document.file_path or not Path(document.file_path).exists():
+        raise HTTPException(status_code=404, detail="Physical file not found on disk")
+
+    return FileResponse(
+        path=document.file_path,
+        filename=document.original_filename,
+        media_type=document.media_type
+    )

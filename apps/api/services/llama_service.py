@@ -48,7 +48,8 @@ class LlamaService:
                 temperature=temperature,
                 max_tokens=max_tokens or 1024,
                 stream=stream,
-                db=self.db
+                db=self.db,
+                messages=messages,
             )
             return response
         except Exception as e:

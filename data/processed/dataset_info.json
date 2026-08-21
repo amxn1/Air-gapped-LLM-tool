@@ -1,0 +1,15 @@
+{
+  "dataset": "wikitext/wikitext-2-raw-v1",
+  "vocab_size": 5000,
+  "max_seq_length": 16,
+  "batch_size": 4,
+  "train_batches": 4230,
+  "val_batches": 1058,
+  "special_tokens": [
+    "",
+    "<pad>",
+    "\n",
+    " ",
+    "<mask>"
+  ]
+}

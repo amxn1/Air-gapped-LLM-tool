@@ -70,7 +70,8 @@ class RetrievalService:
             search_results = self.vector_store.search_vectors(
                 query_vector=query_embedding,
                 limit=limit,
-                collection_id=collection_id
+                collection_id=collection_id,
+                query_text=query,
             )
 
             # 4. Assemble chunks with database metadata & citations

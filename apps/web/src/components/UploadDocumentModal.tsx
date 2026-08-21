@@ -97,7 +97,7 @@ const UploadDocumentModal: React.FC<UploadDocumentModalProps> =
             <input
               type="file"
               id="file-input"
-              accept=".txt,.pdf,.docx,.md"
+              accept=".txt,.pdf,.docx,.doc,.md,.json,.csv,.py,.js,.ts,.html,.log,.yaml,.yml"
               onChange={handleFileChange}
               disabled={uploading}
               required
