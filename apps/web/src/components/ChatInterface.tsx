@@ -105,7 +105,7 @@ const ChatInterface: React.FC = () => {
               const isActive = m.status === 'active';
               list.push({
                 id: modelId,
-                name: isActive ? `🟢 ${modelId} (Active)` : modelId,
+                name: modelId,
                 format: m.format,
                 quantization: m.quantization,
                 status: m.status,
