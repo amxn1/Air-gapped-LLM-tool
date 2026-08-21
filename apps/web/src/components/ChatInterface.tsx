@@ -200,6 +200,18 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  const handleClearAll = async () => {
+    try {
+      await fetch('http://localhost:8000/v1/documents/clear-all', { method: 'POST' });
+    } catch (e) {
+      console.warn('Failed to clear documents on backend:', e);
+    }
+    setMessages([]);
+    setAttachedFiles([]);
+    setActiveDocContext(null);
+    localStorage.removeItem('chatMessages');
+  };
+
   const handleSend = async (overrideText?: string) => {
     const userText = (overrideText !== undefined ? overrideText : input).trim();
     if ((!userText && attachedFiles.length === 0) || isLoading) return;
@@ -505,6 +517,15 @@ const ChatInterface: React.FC = () => {
             disabled={isLoading}
           >
             📎
+          </button>
+          <button
+            type="button"
+            className="input-tool-btn"
+            onClick={handleClearAll}
+            title="Clear conversation & purge stored documents"
+            disabled={isLoading}
+          >
+            🧹
           </button>
           <input
             ref={fileInputRef}

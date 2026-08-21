@@ -144,8 +144,8 @@ async def create_chat_completion(
                 score=1.0
             ))
 
-        elif latest_user_message:
-            # 2. Grounded RAG Knowledge Base Retrieval Flow
+        elif request.collection_id is not None or any(w in latest_user_message.lower() for w in ["in the documents", "in uploaded documents", "search documents", "knowledge base", "in the file"]):
+            # 2. Grounded RAG Knowledge Base Retrieval Flow (Only when collection or document search is requested)
             retrieved_chunks = await retrieval_service.retrieve_relevant_chunks(
                 query=latest_user_message,
                 limit=5,

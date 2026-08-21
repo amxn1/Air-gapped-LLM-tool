@@ -303,3 +303,39 @@ def download_document_file(
         filename=document.original_filename,
         media_type=document.media_type
     )
+
+
+@router.delete("/clear-all")
+@router.post("/clear-all")
+def clear_all_documents(
+    db: Session = Depends(get_db)
+):
+    """
+    Clear all uploaded documents, chunks, and disk files.
+    """
+    try:
+        db.query(models.DocumentChunk).delete()
+        db.query(models.Document).delete()
+        db.commit()
+
+        # Clear in-memory vector store
+        try:
+            from services.retrieval.vector_store import _SHARED_IN_MEMORY_STORE
+            _SHARED_IN_MEMORY_STORE.clear()
+        except Exception:
+            pass
+
+        # Clear physical files in storage and upload dirs
+        for d in [STORAGE_DIR, UPLOAD_DIR]:
+            if d.exists():
+                for f in d.glob("*"):
+                    if f.is_file():
+                        try:
+                            f.unlink()
+                        except Exception:
+                            pass
+
+        return {"message": "All uploaded documents and chunks have been permanently deleted."}
+    except Exception as e:
+        logger.error(f"Error clearing all documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
