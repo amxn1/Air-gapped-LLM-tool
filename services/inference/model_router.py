@@ -57,6 +57,7 @@ CODE_PATTERNS = [
     r"\b(?:python|javascript|typescript|c\+\+|golang|rust|java|html|css|sql|bash|powershell|regex|json|yaml|api|endpoint|docker|dockerfile|git|npm|pip|fastapi|react|vue|node\.js|uvicorn|pandas|numpy|pytorch|tensorflow)\b",
     r"\b(?:def |function |class |import |from |const |let |var |return |public class|static void|SELECT |FROM |INSERT |UPDATE |DELETE |JOIN |CREATE TABLE|try:|except |catch |async def|async function|console\.log|print\(|<div|<script|<template)\b",
     r"\b(?:write a (?:function|script|program|class|component|hook|endpoint|query|regex)|fix (?:this|the) (?:bug|error|issue|code)|debug|refactor|unit test|syntax error|type error|stack trace)\b",
+    r"\b(?:sort|sorting|bubble sort|quick sort|quicksort|merge sort|mergesort|heap sort|heapsort|insertion sort|binary search|linear search|linked list|binary tree|binary search tree|avl tree|graph algorithm|dijkstra|bfs|dfs|dynamic programming|recursion|hash map|hash table|stack|queue|algorithm|data structure|big o|time complexity|space complexity)\b",
     r"```[a-zA-Z0-9_-]*\n",
 ]
 

@@ -63,26 +63,16 @@ class LlamaCppAdapter:
         LlamaCppAdapter._global_llama_cpp_online = val
 
     async def _check_daemons(self):
-        """Fast probe for external daemon availability with global caching."""
-        import time
-        now = time.time()
-        if (
-            LlamaCppAdapter._global_ollama_online is not None
-            and (now - LlamaCppAdapter._global_last_health_check < LlamaCppAdapter._health_ttl)
-        ):
-            return
-        LlamaCppAdapter._global_last_health_check = now
-
-        # Fast probe Ollama on 127.0.0.1 (0.35s timeout)
+        """Fast probe for external daemon availability."""
         try:
-            res = await self.client.get(f"{self.ollama_url}/api/tags", timeout=0.35)
+            res = await self.client.get(f"{self.ollama_url}/api/tags", timeout=5.0)
             LlamaCppAdapter._global_ollama_online = (res.status_code == 200)
         except Exception:
-            LlamaCppAdapter._global_ollama_online = False
+            # Default to trying Ollama anyway if running locally
+            LlamaCppAdapter._global_ollama_online = True
 
-        # Fast probe llama.cpp on 127.0.0.1 (0.25s timeout)
         try:
-            res = await self.client.get(f"{self.base_url}/health", timeout=0.25)
+            res = await self.client.get(f"{self.base_url}/health", timeout=1.0)
             LlamaCppAdapter._global_llama_cpp_online = (res.status_code == 200)
         except Exception:
             LlamaCppAdapter._global_llama_cpp_online = False
@@ -90,12 +80,12 @@ class LlamaCppAdapter:
     async def _resolve_ollama_model(self, requested_model: str) -> Optional[str]:
         """Find the best matching installed model in Ollama."""
         try:
-            res = await self.client.get(f"{self.ollama_url}/api/tags", timeout=2.0)
+            res = await self.client.get(f"{self.ollama_url}/api/tags", timeout=5.0)
             if res.status_code == 200:
                 self._ollama_online = True
                 installed = [m.get("name") for m in res.json().get("models", []) if m.get("name")]
                 if not installed:
-                    return None
+                    return requested_model
 
                 req_norm = re.sub(r"[^a-zA-Z0-9]", "", requested_model.lower())
                 
@@ -115,12 +105,11 @@ class LlamaCppAdapter:
                     if req_base in inst.lower() or inst.lower().split(":")[0] in req_base:
                         return inst
 
-                # 4. Fallback to first available installed model (e.g. llama3.2:1b)
+                # 4. Fallback to requested model or first available installed model
                 return installed[0]
         except Exception as e:
-            logger.debug(f"Ollama resolve error: {e}")
-            self._ollama_online = False
-        return None
+            logger.debug(f"Ollama resolve notice: {e}")
+        return requested_model
 
     def _parse_prompt_to_messages(self, prompt: str) -> List[Dict[str, str]]:
         """Convert a flattened prompt or conversation string into structured chat messages."""
@@ -195,71 +184,66 @@ class LlamaCppAdapter:
         stop: Optional[List[str]],
         messages: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
-        """Attempt live generation via Ollama /api/chat with graceful intelligent fallback."""
-        await self._check_daemons()
-        model_name = model_profile.model_name if model_profile else "llama3.2:1b"
+        """Attempt live generation via Ollama /api/chat with graceful fallback."""
+        model_name = model_profile.model_name if model_profile else "llama3.2:3b"
 
-        # 1. Try Ollama Native API (/api/chat) if online
-        if self._ollama_online:
-            active_ollama_model = await self._resolve_ollama_model(model_name)
-            if active_ollama_model:
-                try:
-                    chat_messages = messages or self._parse_prompt_to_messages(prompt)
-                    ollama_payload = {
-                        "model": active_ollama_model,
-                        "messages": chat_messages,
-                        "stream": False,
-                        "options": {
-                            "temperature": temperature,
-                            "top_p": top_p,
-                            "num_predict": max_tokens or 1024,
-                            "num_ctx": 8192,
-                        }
-                    }
-                    if stop:
-                        ollama_payload["options"]["stop"] = stop
-
-                    res = await self.client.post(f"{self.ollama_url}/api/chat", json=ollama_payload, timeout=60.0)
-                    if res.status_code == 200:
-                        data = res.json()
-                        response_text = data.get("message", {}).get("content", "")
-                        if not response_text and "response" in data:
-                            response_text = data["response"]
-                        if response_text.strip():
-                            return {
-                                "content": response_text,
-                                "model": active_ollama_model,
-                                "usage": {
-                                    "prompt_tokens": data.get("prompt_eval_count", len(prompt.split())),
-                                    "completion_tokens": data.get("eval_count", len(response_text.split())),
-                                    "total_tokens": data.get("prompt_eval_count", 0) + data.get("eval_count", 0)
-                                }
-                            }
-                except Exception as e:
-                    logger.info(f"Ollama chat error: {e}")
-
-        # 2. Try llama.cpp Server (port 8080) if online
-        if self._llama_cpp_online:
-            try:
-                llama_payload = {
-                    "prompt": prompt,
-                    "n_predict": max_tokens or 512,
+        # 1. Always attempt Ollama Native API (/api/chat)
+        try:
+            active_ollama_model = await self._resolve_ollama_model(model_name) or model_name
+            chat_messages = messages or self._parse_prompt_to_messages(prompt)
+            ollama_payload = {
+                "model": active_ollama_model,
+                "messages": chat_messages,
+                "stream": False,
+                "options": {
                     "temperature": temperature,
                     "top_p": top_p,
-                    "stream": False,
+                    "num_predict": max_tokens or 2048,
+                    "num_ctx": 8192,
                 }
-                if stop:
-                    llama_payload["stop"] = stop
+            }
+            if stop:
+                ollama_payload["options"]["stop"] = stop
 
-                res = await self.client.post(f"{self.base_url}/completion", json=llama_payload, timeout=5.0)
-                if res.status_code == 200:
-                    data = res.json()
-                    content = data.get("content", "")
-                    if content.strip():
-                        return data
-            except Exception as e:
-                logger.debug(f"Llama.cpp completion notice: {e}")
-                self._llama_cpp_online = False
+            res = await self.client.post(f"{self.ollama_url}/api/chat", json=ollama_payload, timeout=120.0)
+            if res.status_code == 200:
+                data = res.json()
+                response_text = data.get("message", {}).get("content", "")
+                if not response_text and "response" in data:
+                    response_text = data["response"]
+                if response_text and response_text.strip():
+                    return {
+                        "content": response_text,
+                        "model": active_ollama_model,
+                        "usage": {
+                            "prompt_tokens": data.get("prompt_eval_count", len(prompt.split())),
+                            "completion_tokens": data.get("eval_count", len(response_text.split())),
+                            "total_tokens": data.get("prompt_eval_count", 0) + data.get("eval_count", 0)
+                        }
+                    }
+        except Exception as e:
+            logger.warning(f"Ollama chat invocation warning: {e}")
+
+        # 2. Try llama.cpp Server (port 8080) if online
+        try:
+            llama_payload = {
+                "prompt": prompt,
+                "n_predict": max_tokens or 512,
+                "temperature": temperature,
+                "top_p": top_p,
+                "stream": False,
+            }
+            if stop:
+                llama_payload["stop"] = stop
+
+            res = await self.client.post(f"{self.base_url}/completion", json=llama_payload, timeout=5.0)
+            if res.status_code == 200:
+                data = res.json()
+                content = data.get("content", "")
+                if content.strip():
+                    return data
+        except Exception as e:
+            logger.debug(f"Llama.cpp completion notice: {e}")
 
         # 3. Dynamic Natural Conversational Response (Local Fallback)
         return self._generate_dynamic_response(prompt, model_profile)
@@ -275,41 +259,39 @@ class LlamaCppAdapter:
         messages: Optional[List[Dict[str, str]]] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream generation with live Ollama (/api/chat) or tokenized local generator."""
-        model_name = model_profile.model_name if model_profile else "llama3.2:1b"
+        model_name = model_profile.model_name if model_profile else "llama3.2:3b"
 
         # Try live Ollama streaming
-        await self._check_daemons()
-        active_ollama_model = await self._resolve_ollama_model(model_name)
-        if active_ollama_model and self._ollama_online:
-            try:
-                chat_messages = messages or self._parse_prompt_to_messages(prompt)
-                ollama_payload = {
-                    "model": active_ollama_model,
-                    "messages": chat_messages,
-                    "stream": True,
-                    "options": {
-                        "temperature": temperature,
-                        "top_p": top_p,
-                        "num_predict": max_tokens or 1024,
-                        "num_ctx": 8192,
-                    }
+        try:
+            active_ollama_model = await self._resolve_ollama_model(model_name) or model_name
+            chat_messages = messages or self._parse_prompt_to_messages(prompt)
+            ollama_payload = {
+                "model": active_ollama_model,
+                "messages": chat_messages,
+                "stream": True,
+                "options": {
+                    "temperature": temperature,
+                    "top_p": top_p,
+                    "num_predict": max_tokens or 2048,
+                    "num_ctx": 8192,
                 }
-                async with self.client.stream("POST", f"{self.ollama_url}/api/chat", json=ollama_payload, timeout=60.0) as response:
-                    if response.status_code == 200:
-                        async for line in response.aiter_lines():
-                            if line:
-                                try:
-                                    chunk = json.loads(line)
-                                    text_piece = chunk.get("message", {}).get("content", "")
-                                    is_done = chunk.get("done", False)
-                                    yield {"content": text_piece, "stop": is_done}
-                                    if is_done:
-                                        return
-                                except Exception:
-                                    continue
-                        return
-            except Exception as e:
-                logger.debug(f"Ollama streaming notice: {e}")
+            }
+            async with self.client.stream("POST", f"{self.ollama_url}/api/chat", json=ollama_payload, timeout=120.0) as response:
+                if response.status_code == 200:
+                    async for line in response.aiter_lines():
+                        if line:
+                            try:
+                                chunk = json.loads(line)
+                                text_piece = chunk.get("message", {}).get("content", "")
+                                is_done = chunk.get("done", False)
+                                yield {"content": text_piece, "stop": is_done}
+                                if is_done:
+                                    return
+                            except Exception:
+                                continue
+                    return
+        except Exception as e:
+            logger.debug(f"Ollama streaming notice: {e}")
 
         # Dynamic natural token streamer
         dynamic_res = self._generate_dynamic_response(prompt, model_profile)
