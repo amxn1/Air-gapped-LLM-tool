@@ -27,11 +27,8 @@ SPECIALIST_MODEL_PREFERENCES: Dict[str, List[str]] = {
         "llama3:latest",
     ],
     "pdf_document_reading": [
-        "phi3.5:latest",
-        "phi3.5:3.8b",
-        "phi3:mini",
-        "gemma2:2b",
         "llama3.2:3b",
+        "phi3.5:latest",
         "llama3:latest",
         "gemma4:26b",
     ],

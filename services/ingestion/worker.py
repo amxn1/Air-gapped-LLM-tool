@@ -134,21 +134,21 @@ class IngestionWorker:
                 [c["text"] for c in chunks]
             )
 
-            # Step 5: Save chunk records and vectors
-            for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-                section_name = f"Section {i+1}"
-                db_chunk = models.DocumentChunk(
+            # Step 5: Save chunk records and vectors in batch
+            db_chunks = []
+            for i, chunk in enumerate(chunks):
+                db_chunks.append(models.DocumentChunk(
                     document_id=result["document_id"],
                     chunk_index=i,
                     text=chunk["text"],
-                )
-                self.db.add(db_chunk)
-                self.db.commit()
-                if not is_mock_session:
-                    self.db.refresh(db_chunk)
+                ))
+            self.db.add_all(db_chunks)
+            self.db.commit()
 
-                chunk_id_val = db_chunk.id if not is_mock_session else (i + 1)
-                if self.vector_store:
+            if self.vector_store:
+                for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+                    section_name = f"Section {i+1}"
+                    chunk_id_val = db_chunks[i].id if hasattr(db_chunks[i], "id") and db_chunks[i].id else (i + 1)
                     self.vector_store.add_vector(
                         vector_id=str(chunk_id_val),
                         vector=embedding,

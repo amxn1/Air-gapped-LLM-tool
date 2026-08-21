@@ -33,6 +33,7 @@ const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState<string>('Thinking...');
   const [models, setModels] = useState<ModelItem[]>([
     { id: 'auto', name: 'Auto (Smart Router)', status: 'active' },
     { id: 'llama3.2:3b', name: 'llama3.2:3b', status: 'active' },
@@ -204,6 +205,7 @@ const ChatInterface: React.FC = () => {
     if ((!userText && attachedFiles.length === 0) || isLoading) return;
 
     setIsLoading(true);
+    setLoadingStatus(attachedFiles.length > 0 ? 'Reading and indexing attached document...' : 'Analyzing prompt and selecting optimal model...');
     setInput('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
@@ -218,6 +220,7 @@ const ChatInterface: React.FC = () => {
     for (const f of attachedFiles) {
       let docText = '';
       try {
+        setLoadingStatus(`Extracting text from ${f.name}...`);
         const formData = new FormData();
         formData.append('file', f);
         if (selectedCollectionId) {
@@ -281,6 +284,7 @@ const ChatInterface: React.FC = () => {
     setAttachedFiles([]);
 
     try {
+      setLoadingStatus(selectedModel === 'auto' ? 'Routing to specialist offline model...' : `${selectedModel} is generating response...`);
       const messagesPayload = messages.map((m) => ({
         role: m.role,
         content: m.content,
@@ -463,7 +467,7 @@ const ChatInterface: React.FC = () => {
         {isLoading && (
           <div className="message-row message-assistant">
             <div className="message-bubble loading-bubble">
-              <span className="dot-pulse"></span> {selectedModel === 'auto' ? 'Analyzing prompt and routing to specialist model...' : `${selectedModel} is thinking...`}
+              <span className="dot-pulse"></span> {loadingStatus}
             </div>
           </div>
         )}

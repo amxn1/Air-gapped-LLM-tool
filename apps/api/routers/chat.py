@@ -120,9 +120,13 @@ async def create_chat_completion(
                 "- Do not invent facts or extrapolate beyond what is stated in the document."
             )
 
+            doc_text_clean = doc_content.strip()
+            if len(doc_text_clean) > 10000:
+                doc_text_clean = doc_text_clean[:10000] + "\n\n... [Document continues - primary sections extracted above] ..."
+
             formatted_user_prompt = (
                 f"=== DOCUMENT: {doc_name.strip()} ===\n"
-                f"{doc_content.strip()}\n\n"
+                f"{doc_text_clean}\n\n"
                 f"=== USER REQUEST ===\n"
                 f"{clean_user_q}"
             )
