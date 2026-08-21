@@ -18,6 +18,7 @@ from packages.contracts.schemas import (
 )
 from ..services.llama_service import LlamaService
 from services.retrieval.service import RetrievalService
+from services.inference.model_router import select_optimal_model
 from ..database import get_db
 from .. import models
 
@@ -36,33 +37,16 @@ async def create_chat_completion(
 ):
     """
     Create a chat completion for the provided messages.
-    Fully compatible with OpenAI API format with local RAG citations and task template support.
+    Fully compatible with OpenAI API format with local RAG citations, task template support,
+    and automated dynamic model routing based on prompt complexity and domain.
     """
     llama_service = LlamaService()
     retrieval_service = RetrievalService(db_session=db)
 
     try:
-        # Determine model ID
-        model_profile = None
-        if request.model:
-            model_profile = db.query(models.ModelProfile).filter(
-                models.ModelProfile.model_name == request.model
-            ).first()
-
-        if not model_profile:
-            model_profile = db.query(models.ModelProfile).filter(
-                models.ModelProfile.status == "active"
-            ).first()
-
-        model_id = model_profile.id if model_profile else None
-        model_name = request.model or (model_profile.model_name if model_profile else "llama3.2:1b")
-
         # Extract latest user message
         user_messages = [msg for msg in request.messages if msg.role == "user"]
         latest_user_message = user_messages[-1].content if user_messages else ""
-
-        citations: List[CitationReference] = []
-        augmented_messages = []
 
         # Check if direct document attachment is in the latest user message
         is_direct_doc = "--- [attached document:" in latest_user_message.lower()
@@ -73,6 +57,37 @@ async def create_chat_completion(
                 latest_user_message,
                 re.DOTALL | re.IGNORECASE
             )
+
+        # Dynamic Model Routing according to prompt complexity & intent
+        from .models import _sync_ollama_models
+        await _sync_ollama_models(db)
+
+        all_profiles = db.query(models.ModelProfile).all()
+        available_model_names = [p.model_name for p in all_profiles if p.model_name]
+
+        model_name, domain_cat, routing_reason = select_optimal_model(
+            prompt=latest_user_message,
+            available_models=available_model_names,
+            has_doc_attachment=bool(doc_matches),
+            requested_model=request.model
+        )
+
+        model_profile = db.query(models.ModelProfile).filter(
+            models.ModelProfile.model_name == model_name
+        ).first()
+
+        if not model_profile and all_profiles:
+            model_profile = db.query(models.ModelProfile).filter(
+                models.ModelProfile.status == "active"
+            ).first() or all_profiles[0]
+            model_name = model_profile.model_name
+
+        model_id = model_profile.id if model_profile else None
+
+        citations: List[CitationReference] = []
+        augmented_messages = []
+
+
 
         if doc_matches:
             # 1. Direct Document Analysis & Summarization Flow

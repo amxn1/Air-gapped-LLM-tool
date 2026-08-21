@@ -44,7 +44,7 @@ class LlamaCppAdapter:
     def __init__(self, base_url: str = "http://127.0.0.1:8080", ollama_url: str = "http://127.0.0.1:11434"):
         self.base_url = base_url.rstrip("/")
         self.ollama_url = ollama_url.rstrip("/")
-        self.client = httpx.AsyncClient(timeout=15.0)
+        self.client = httpx.AsyncClient(timeout=120.0)
 
     @property
     def _ollama_online(self) -> Optional[bool]:

@@ -4,6 +4,7 @@ import './ChatInterface.css';
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  model_used?: string;
   files?: Array<{ name: string; size: number; type: string }>;
   citations?: Array<{
     document_id: number;
@@ -33,14 +34,15 @@ const ChatInterface: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [models, setModels] = useState<ModelItem[]>([
-    { id: 'llama3.2:3b', name: 'llama3.2:3b (Meta)', status: 'active' },
-    { id: 'phi3.5:latest', name: 'phi3.5:latest (Microsoft / PDF)', status: 'active' },
-    { id: 'qwen2.5-coder:1.5b', name: 'qwen2.5-coder:1.5b (Coding)', status: 'active' },
-    { id: 'deepseek-r1:1.5b', name: 'deepseek-r1:1.5b (Reasoning)', status: 'active' },
-    { id: 'llama3:latest', name: 'llama3:latest (Local Active)', status: 'active' },
-    { id: 'gemma4:26b', name: 'gemma4:26b (Google / Local Active)', status: 'active' },
+    { id: 'auto', name: 'Auto (Smart Router)', status: 'active' },
+    { id: 'llama3.2:3b', name: 'llama3.2:3b', status: 'active' },
+    { id: 'phi3.5:latest', name: 'phi3.5:latest', status: 'active' },
+    { id: 'qwen2.5-coder:1.5b', name: 'qwen2.5-coder:1.5b', status: 'active' },
+    { id: 'deepseek-r1:1.5b', name: 'deepseek-r1:1.5b', status: 'active' },
+    { id: 'llama3:latest', name: 'llama3:latest', status: 'active' },
+    { id: 'gemma4:26b', name: 'gemma4:26b', status: 'active' },
   ]);
-  const [selectedModel, setSelectedModel] = useState<string>('llama3.2:3b');
+  const [selectedModel, setSelectedModel] = useState<string>('auto');
 
   // Attached files for current draft
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -97,12 +99,13 @@ const ChatInterface: React.FC = () => {
         const modelData = await modelsRes.json();
         if (Array.isArray(modelData) && modelData.length > 0) {
           const seen = new Set<string>();
-          const list: ModelItem[] = [];
+          const list: ModelItem[] = [
+            { id: 'auto', name: 'Auto (Smart Router)', status: 'active' },
+          ];
           for (const m of modelData) {
             const modelId = m.model_name || m.id;
             if (modelId && !seen.has(modelId)) {
               seen.add(modelId);
-              const isActive = m.status === 'active';
               list.push({
                 id: modelId,
                 name: modelId,
@@ -113,20 +116,8 @@ const ChatInterface: React.FC = () => {
             }
           }
 
-          // Sort: active models first
-          list.sort((a, b) => {
-            if (a.status === 'active' && b.status !== 'active') return -1;
-            if (b.status === 'active' && a.status !== 'active') return 1;
-            return 0;
-          });
-
           if (list.length > 0) {
             setModels(list);
-            const bestMatch =
-              list.find((m) => m.id === 'llama3.2:3b' && m.status === 'active') ||
-              list.find((m) => m.status === 'active') ||
-              list[0];
-            setSelectedModel(bestMatch.id);
           }
         }
       }
@@ -322,6 +313,7 @@ const ChatInterface: React.FC = () => {
         {
           role: 'assistant',
           content: assistantMsg,
+          model_used: data.model,
           citations: data.citations || undefined,
         },
       ]);
@@ -374,7 +366,7 @@ const ChatInterface: React.FC = () => {
           <div className="drag-content">
             <span className="drag-icon">📂</span>
             <h3>Drop documents here</h3>
-            <p>PDFs, Word docs, code, and text will be attached and read by {selectedModel}.</p>
+            <p>PDFs, Word docs, code, and text will be attached and analyzed locally.</p>
           </div>
         </div>
       )}
@@ -385,7 +377,7 @@ const ChatInterface: React.FC = () => {
           <div className="chat-welcome">
             <h3>Air-Gapped Offline Assistant</h3>
             <p>
-              Connected to <strong>{selectedModel}</strong>. All documents, prompts, embeddings, and inference remain 100% on your local machine with zero network egress.
+              Autonomous model selection active. Prompts, documents, code, mathematics, and reasoning are dynamically routed to the optimal specialized local model.
             </p>
 
             {/* Quick Prompt Starters */}
@@ -408,9 +400,16 @@ const ChatInterface: React.FC = () => {
               <button
                 type="button"
                 className="quick-prompt-chip"
-                onClick={() => handleSend('Write a secure Python script for local file processing.')}
+                onClick={() => handleSend('Write a python function to binary search a sorted array.')}
               >
-                💻 Write Secure Python Code
+                💻 Write Python Code
+              </button>
+              <button
+                type="button"
+                className="quick-prompt-chip"
+                onClick={() => handleSend('Calculate 17 * 23 + 49 / 7. Think step by step.')}
+              >
+                🧠 Step-by-Step Math Reasoning
               </button>
             </div>
           </div>
@@ -420,7 +419,9 @@ const ChatInterface: React.FC = () => {
               <div className="message-bubble">
                 <div className="message-header">
                   <span className="role-label">
-                    {m.role === 'user' ? '👤 User' : `🤖 Assistant (${selectedModel})`}
+                    {m.role === 'user'
+                      ? '👤 User'
+                      : `🤖 Assistant ${m.model_used ? `(${m.model_used})` : ''}`}
                   </span>
                 </div>
 
@@ -462,7 +463,7 @@ const ChatInterface: React.FC = () => {
         {isLoading && (
           <div className="message-row message-assistant">
             <div className="message-bubble loading-bubble">
-              <span className="dot-pulse"></span> {selectedModel} is thinking and reading documents...
+              <span className="dot-pulse"></span> {selectedModel === 'auto' ? 'Analyzing prompt and routing to specialist model...' : `${selectedModel} is thinking...`}
             </div>
           </div>
         )}
@@ -532,7 +533,7 @@ const ChatInterface: React.FC = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask a question or request document analysis... (Enter to send, Shift+Enter for newline)"
+            placeholder="Ask a question, paste code, request math calculation or document analysis... (Enter to send)"
             disabled={isLoading}
             className="main-chat-textarea"
             rows={1}
