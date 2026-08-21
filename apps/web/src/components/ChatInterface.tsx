@@ -383,7 +383,6 @@ const ChatInterface: React.FC = () => {
       <div className="messages-feed">
         {messages.length === 0 ? (
           <div className="chat-welcome">
-            <div className="welcome-icon">🛡️</div>
             <h3>Air-Gapped Offline Assistant</h3>
             <p>
               Connected to <strong>{selectedModel}</strong>. All documents, prompts, embeddings, and inference remain 100% on your local machine with zero network egress.
